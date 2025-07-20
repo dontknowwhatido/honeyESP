@@ -18,6 +18,11 @@
 char mqttBroker[64] = "";
 char mqttPort[64] = "";
 
+char mqtt_clientID[64] = "";
+char mqtt_username[64] = "";
+char mqtt_password[64] = "";
+char channelID[64] = "";
+
 int connectionDelay = 2;
 int sleeptime = 30;
 
@@ -210,6 +215,10 @@ void setup() {
         if (!doc.isNull()) {
           strcpy(mqttBroker, doc["mqttBroker"]);
           strcpy(mqttPort, doc["mqttPort"]);
+          strcpy(mqtt_clientID, doc["mqtt_clientID"]);
+          strcpy(mqtt_username, doc["mqtt_username"]);
+          strcpy(mqtt_password, doc["mqtt_password"]);
+          strcpy(channelID, doc["channelID"]);
           Serial.println("\nparsed json");
         } else {
           Serial.println("failed to load json config");
@@ -223,6 +232,10 @@ void setup() {
 
   WiFiManagerParameter ask_mqttBroker("mqttBroker", "mqttBroker", mqttBroker, 30);
   WiFiManagerParameter ask_mqttPort("mqttPort", "mqttPort", mqttPort, 30);
+  WiFiManagerParameter ask_clientID("mqtt_clientID", "MQTT clientID (ThingSpeak)", mqtt_clientID, 30);
+  WiFiManagerParameter ask_username("mqtt_username", "MQTT username (ThingSpeak)", mqtt_username, 30);
+  WiFiManagerParameter ask_password("mqtt_password", "MQTT password (ThingSpeak)", mqtt_password, 30);
+  WiFiManagerParameter ask_channelID("channelID", "channelID (ThingSpeak)", channelID, 30);
 
   
   wifiManager.setSaveConfigCallback(saveConfigCallback);
@@ -230,8 +243,10 @@ void setup() {
 
   wifiManager.addParameter(&ask_mqttBroker);
   wifiManager.addParameter(&ask_mqttPort);
-
-
+  wifiManager.addParameter(&ask_clientID);
+  wifiManager.addParameter(&ask_username);
+  wifiManager.addParameter(&ask_password);
+  wifiManager.addParameter(&ask_channelID);
 
 
   // Open Config-Portal or connect to Wi-Fi network.
@@ -242,6 +257,10 @@ void setup() {
   
   strcpy(mqttBroker, ask_mqttBroker.getValue());
   strcpy(mqttPort, ask_mqttPort.getValue());
+  strcpy(mqtt_clientID, ask_clientID.getValue());
+  strcpy(mqtt_username, ask_username.getValue());
+  strcpy(mqtt_password, ask_password.getValue());
+  strcpy(channelID, ask_channelID.getValue());
 
   //save the custom parameters to FS
   if (shouldSaveConfig) {
@@ -249,6 +268,10 @@ void setup() {
     DynamicJsonDocument doc(1024);
     doc["mqttBroker"] = mqttBroker;
     doc["mqttPort"] = mqttPort;
+    doc["mqtt_clientID"] = mqtt_clientID;
+    doc["mqtt_username"] = mqtt_username;
+    doc["mqtt_password"] = mqtt_password;
+    doc["channelID"] = channelID;
     
 
     File configFile = SPIFFS.open("/config.json", "w");
@@ -264,14 +287,14 @@ void setup() {
   }
 
   if(analogRead(A0) > 900){
-    Serial.println("Arbeitsmodus");
+    Serial.println("Workmode");
 
     connectToServers();
     scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
 
     float oldWeight = scale.read();
     digitalWrite(15, HIGH);
-    Serial.println("warten");
+    Serial.println("waiting");
 
     while(digitalRead(12) != HIGH){
       delay(1000);
