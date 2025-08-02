@@ -1,4 +1,8 @@
 {
   "mqttBroker": "",
   "mqttPort": "",
+  "mqtt_clientID": "",
+  "mqtt_username": "",
+  "mqtt_password": "",
+  "channelID": "",
 }

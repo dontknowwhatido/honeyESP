@@ -18,10 +18,14 @@
 char mqttBroker[64] = "";
 char mqttPort[64] = "";
 
+char mqtt_clientID[64] = "";
+char mqtt_username[64] = "";
+char mqtt_password[64] = "";
+char channelID[64] = "";
+
 int connectionDelay = 2;
 int sleeptime = 30;
 
-// Comment the following line if not using an ESP8266.
 #define ESP8266BOARD
 
 WiFiClient client;
@@ -70,8 +74,7 @@ void mqttSubscriptionCallback( char* topic, byte* payload, unsigned int length )
 }
 
 // Connect to WiFi.
-void connectWifi()
-{
+void connectWifi(){
   Serial.print( "Connecting to Wi-Fi..." );
   // Loop until WiFi connection is successful
   #ifdef ESP8266BOARD
@@ -89,19 +92,40 @@ void mqttConnect() {
   // Loop until connected.
   while ( !mqttClient.connected() )
   {
-    // Connect to the MQTT broker.
-    if ( mqttClient.connect("honey-esp") ){
-      Serial.print( "MQTT to " );
-      Serial.print( mqttBroker );
-      Serial.print (" at port ");
-      Serial.print( mqttPort );
-      Serial.println( " successful." );
-    } else {
-      Serial.print( "MQTT connection failed, rc = " );
-      // See https://pubsubclient.knolleary.net/api.html#state for the failure code explanation.
-      Serial.print( mqttClient.state() );
-      Serial.println( " Will try again in a few seconds" );
-      delay( connectionDelay*1000 );
+    if (strcmp(mqttBroker, "mqtt3.thingspeak.com") == 0){
+      Serial.println("ThingSpeak");
+      if ( mqttClient.connect( mqtt_clientID, mqtt_username, mqtt_password ) ){
+        Serial.print( "MQTT to " );
+        Serial.print( mqttBroker );
+        Serial.print (" at port ");
+        Serial.print( mqttPort );
+        Serial.println( " successful." );
+      }
+      else {
+        Serial.print( "MQTT connection failed, rc = " );
+        // See https://pubsubclient.knolleary.net/api.html#state for the failure code explanation.
+        Serial.print( mqttClient.state() );
+        Serial.println( " Will try again in a few seconds" );
+        delay( connectionDelay*1000 );
+      }
+    }
+    else{
+      Serial.println("privat mqtt");
+      // Connect to the MQTT broker.
+      if ( mqttClient.connect("honey-esp") ){
+        Serial.print( "MQTT to " );
+        Serial.print( mqttBroker );
+        Serial.print (" at port ");
+        Serial.print( mqttPort );
+        Serial.println( " successful." );
+      } 
+      else {
+        Serial.print( "MQTT connection failed, rc = " );
+        // See https://pubsubclient.knolleary.net/api.html#state for the failure code explanation.
+        Serial.print( mqttClient.state() );
+        Serial.println( " Will try again in a few seconds" );
+        delay( connectionDelay*1000 );
+      }
     }
   }
 }
@@ -128,11 +152,31 @@ void get_values(){
   sens_values[4] = scale.read();
 }
 
+void ThingSpeakPublish(char* pubChannelID, String message) {
+  String topicString ="channels/" + String( pubChannelID ) + "/publish";
+  mqttClient.publish( topicString.c_str(), message.c_str() );
+}
+
 //Funktion um Sensorwerte an MQTT-Server zu schicken
 void send_data(){
-  for(int i; i < number_of_sensors; i++){
-    if(sens_values[i] != -4000){
-      mqttClient.publish( ("honey-esp/" + sensor_names[i]).c_str() , String(sens_values[i]).c_str() );
+  if(strcmp(mqttBroker, "mqtt3.thingspeak.com") == 0){
+    String pub_str;
+    for(int i; i < number_of_sensors; i++){
+      if(sens_values[i] != -4000){
+        String tmp_str = String("field") + String(i + 1).c_str() + String("=") + String(sens_values[i]).c_str() + String("&");
+        pub_str = pub_str + tmp_str;
+      }
+    }
+    int lastIndex = pub_str.length() - 1;
+    pub_str.remove(lastIndex);
+    Serial.println(pub_str);
+    ThingSpeakPublish(channelID, pub_str);
+  }
+  else{
+    for(int i; i < number_of_sensors; i++){
+      if(sens_values[i] != -4000){
+        mqttClient.publish( ("honey-esp/" + sensor_names[i]).c_str() , String(sens_values[i]).c_str() );
+      }
     }
   }
   delay(1000);
@@ -158,7 +202,8 @@ void connectToServers(){
   }
 
   // Configure the MQTT client
-  mqttClient.setServer( mqttBroker, atoi(mqttPort) ); 
+  mqttClient.setServer( mqttBroker, atoi(mqttPort) );
+  Serial.print("Server set to "); Serial.print(mqttBroker); Serial.print(":"); Serial.println(mqttPort);
   // Set the MQTT message handler function.
   mqttClient.setCallback( mqttSubscriptionCallback );
   // Set the buffer to handle the returned JSON. NOTE: A buffer overflow of the message buffer will result in your callback not being invoked.
@@ -210,6 +255,10 @@ void setup() {
         if (!doc.isNull()) {
           strcpy(mqttBroker, doc["mqttBroker"]);
           strcpy(mqttPort, doc["mqttPort"]);
+          strcpy(mqtt_clientID, doc["mqtt_clientID"]);
+          strcpy(mqtt_username, doc["mqtt_username"]);
+          strcpy(mqtt_password, doc["mqtt_password"]);
+          strcpy(channelID, doc["channelID"]);
           Serial.println("\nparsed json");
         } else {
           Serial.println("failed to load json config");
@@ -223,6 +272,10 @@ void setup() {
 
   WiFiManagerParameter ask_mqttBroker("mqttBroker", "mqttBroker", mqttBroker, 30);
   WiFiManagerParameter ask_mqttPort("mqttPort", "mqttPort", mqttPort, 30);
+  WiFiManagerParameter ask_clientID("mqtt_clientID", "MQTT clientID (ThingSpeak)", mqtt_clientID, 30);
+  WiFiManagerParameter ask_username("mqtt_username", "MQTT username (ThingSpeak)", mqtt_username, 30);
+  WiFiManagerParameter ask_password("mqtt_password", "MQTT password (ThingSpeak)", mqtt_password, 30);
+  WiFiManagerParameter ask_channelID("channelID", "channelID (ThingSpeak)", channelID, 30);
 
   
   wifiManager.setSaveConfigCallback(saveConfigCallback);
@@ -230,8 +283,10 @@ void setup() {
 
   wifiManager.addParameter(&ask_mqttBroker);
   wifiManager.addParameter(&ask_mqttPort);
-
-
+  wifiManager.addParameter(&ask_clientID);
+  wifiManager.addParameter(&ask_username);
+  wifiManager.addParameter(&ask_password);
+  wifiManager.addParameter(&ask_channelID);
 
 
   // Open Config-Portal or connect to Wi-Fi network.
@@ -242,6 +297,10 @@ void setup() {
   
   strcpy(mqttBroker, ask_mqttBroker.getValue());
   strcpy(mqttPort, ask_mqttPort.getValue());
+  strcpy(mqtt_clientID, ask_clientID.getValue());
+  strcpy(mqtt_username, ask_username.getValue());
+  strcpy(mqtt_password, ask_password.getValue());
+  strcpy(channelID, ask_channelID.getValue());
 
   //save the custom parameters to FS
   if (shouldSaveConfig) {
@@ -249,6 +308,10 @@ void setup() {
     DynamicJsonDocument doc(1024);
     doc["mqttBroker"] = mqttBroker;
     doc["mqttPort"] = mqttPort;
+    doc["mqtt_clientID"] = mqtt_clientID;
+    doc["mqtt_username"] = mqtt_username;
+    doc["mqtt_password"] = mqtt_password;
+    doc["channelID"] = channelID;
     
 
     File configFile = SPIFFS.open("/config.json", "w");
@@ -264,14 +327,14 @@ void setup() {
   }
 
   if(analogRead(A0) > 900){
-    Serial.println("Arbeitsmodus");
+    Serial.println("Workmode");
 
     connectToServers();
     scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
 
     float oldWeight = scale.read();
     digitalWrite(15, HIGH);
-    Serial.println("warten");
+    Serial.println("waiting");
 
     while(digitalRead(12) != HIGH){
       delay(1000);
@@ -283,8 +346,13 @@ void setup() {
     float weightDifference = newWeight - oldWeight;
 
     Serial.println("send Data");
-    mqttClient.publish("honey-esp/lastWeightDifference", String(weightDifference).c_str() );
-    Serial.println("Data send");
+    if(strcmp(mqttBroker, "mqtt3.thingspeak.com") == 0){
+      ThingSpeakPublish(channelID, String("field") + String(number_of_sensors + 1) + String("=") + String(weightDifference).c_str() );
+    }
+    else{
+      mqttClient.publish("honey-esp/lastWeightDifference", String(weightDifference).c_str() );
+    }
+    Serial.println("Data sent");
 
     digitalWrite(15, LOW);
   }
