@@ -161,7 +161,7 @@ void ThingSpeakPublish(char* pubChannelID, String message) {
 void send_data(){
   if(strcmp(mqttBroker, "mqtt3.thingspeak.com") == 0){
     String pub_str;
-    for(int i; i < number_of_sensors; i++){
+    for(int i = 0; i < number_of_sensors; i++){
       if(sens_values[i] != -4000){
         String tmp_str = String("field") + String(i + 1).c_str() + String("=") + String(sens_values[i]).c_str() + String("&");
         pub_str = pub_str + tmp_str;
@@ -173,7 +173,7 @@ void send_data(){
     ThingSpeakPublish(channelID, pub_str);
   }
   else{
-    for(int i; i < number_of_sensors; i++){
+    for(int i = 0; i < number_of_sensors; i++){
       if(sens_values[i] != -4000){
         mqttClient.publish( ("honey-esp/" + sensor_names[i]).c_str() , String(sens_values[i]).c_str() );
       }
