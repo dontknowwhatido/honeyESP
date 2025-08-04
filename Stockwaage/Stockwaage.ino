@@ -253,12 +253,18 @@ void setup() {
         deserializeJson(doc, buf.get());
         serializeJson(doc, Serial);
         if (!doc.isNull()) {
-          strcpy(mqttBroker, doc["mqttBroker"]);
-          strcpy(mqttPort, doc["mqttPort"]);
-          strcpy(mqtt_clientID, doc["mqtt_clientID"]);
-          strcpy(mqtt_username, doc["mqtt_username"]);
-          strcpy(mqtt_password, doc["mqtt_password"]);
-          strcpy(channelID, doc["channelID"]);
+          strncpy(mqttBroker, doc["mqttBroker"], sizeof(mqttBroker));
+          mqttBroker[sizeof(mqttBroker)-1] = '\0';
+          strncpy(mqttPort, doc["mqttPort"], sizeof(mqttPort));
+          mqttPort[sizeof(mqttPort)-1] = '\0';
+          strncpy(mqtt_clientID, doc["mqtt_clientID"], sizeof(mqtt_clientID));
+          mqtt_clientID[sizeof(mqtt_clientID)-1] = '\0';
+          strncpy(mqtt_username, doc["mqtt_username"], sizeof(mqtt_username));
+          mqtt_username[sizeof(mqtt_username)-1] = '\0';
+          strncpy(mqtt_password, doc["mqtt_password"], sizeof(mqtt_password));
+          mqtt_password[sizeof(mqtt_password)-1] = '\0';
+          strncpy(channelID, doc["channelID"], sizeof(channelID));
+          channelID[sizeof(channelID)-1] = '\0';
           Serial.println("\nparsed json");
         } else {
           Serial.println("failed to load json config");
@@ -295,12 +301,18 @@ void setup() {
     connectWifi();
   }
   
-  strcpy(mqttBroker, ask_mqttBroker.getValue());
-  strcpy(mqttPort, ask_mqttPort.getValue());
-  strcpy(mqtt_clientID, ask_clientID.getValue());
-  strcpy(mqtt_username, ask_username.getValue());
-  strcpy(mqtt_password, ask_password.getValue());
-  strcpy(channelID, ask_channelID.getValue());
+  strncpy(mqttBroker, ask_mqttBroker.getValue(), sizeof(mqttBroker));
+  mqttBroker[sizeof(mqttBroker)-1] = '\0';
+  strncpy(mqttPort, ask_mqttPort.getValue(), sizeof(mqttPort));
+  mqttPort[sizeof(mqttPort)-1] = '\0';
+  strncpy(mqtt_clientID, ask_clientID.getValue(), sizeof(mqtt_clientID));
+  mqtt_clientID[sizeof(mqtt_clientID)-1] = '\0';
+  strncpy(mqtt_username, ask_username.getValue(), sizeof(mqtt_username));
+  mqtt_username[sizeof(mqtt_username)-1] = '\0';
+  strncpy(mqtt_password, ask_password.getValue(), sizeof(mqtt_password));
+  mqtt_password[sizeof(mqtt_password)-1] = '\0';
+  strncpy(channelID, ask_channelID.getValue(), sizeof(channelID));
+  channelID[sizeof(channelID)-1] = '\0';
 
   //save the custom parameters to FS
   if (shouldSaveConfig) {
