@@ -138,8 +138,8 @@ void get_values(){
   
   if(bme_available == 1){
   
-    sens_values[1] = bme.readTemperature(),1;
-    sens_values[2] = bme.readHumidity(),1;
+    sens_values[1] = bme.readTemperature();
+    sens_values[2] = bme.readHumidity();
     sens_values[3] = bme.readPressure() / 100.0F;
   }
 
@@ -154,13 +154,20 @@ void get_values(){
 
 void ThingSpeakPublish(char* pubChannelID, String message) {
   String topicString ="channels/" + String( pubChannelID ) + "/publish";
-  mqttClient.publish( topicString.c_str(), message.c_str() );
+  if(topicString.length()+ message.length() < mqttClient.getBufferSize()){
+    mqttClient.publish( topicString.c_str(), message.c_str() );
+    Serial.println("Data published successfull to ThingSpeak");
+  }
+  else{
+    Serial.println("PubSubClient: strings size exceeds Buffer size");
+  }
 }
 
 //Funktion um Sensorwerte an MQTT-Server zu schicken
 void send_data(){
   if(strcmp(mqttBroker, "mqtt3.thingspeak.com") == 0){
     String pub_str;
+    pub_str.reserve(256);
     for(int i = 0; i < number_of_sensors; i++){
       if(sens_values[i] != -4000){
         pub_str.concat(String("field") + String(i + 1).c_str() + String("=") + String(sens_values[i]).c_str() + String("&"));
@@ -275,12 +282,12 @@ void setup() {
   }
   //end read
 
-  WiFiManagerParameter ask_mqttBroker("mqttBroker", "mqttBroker", mqttBroker, 30);
-  WiFiManagerParameter ask_mqttPort("mqttPort", "mqttPort", mqttPort, 30);
-  WiFiManagerParameter ask_clientID("mqtt_clientID", "MQTT clientID (ThingSpeak)", mqtt_clientID, 30);
-  WiFiManagerParameter ask_username("mqtt_username", "MQTT username (ThingSpeak)", mqtt_username, 30);
-  WiFiManagerParameter ask_password("mqtt_password", "MQTT password (ThingSpeak)", mqtt_password, 30);
-  WiFiManagerParameter ask_channelID("channelID", "channelID (ThingSpeak)", channelID, 30);
+  WiFiManagerParameter ask_mqttBroker("mqttBroker", "mqttBroker", mqttBroker, 64);
+  WiFiManagerParameter ask_mqttPort("mqttPort", "mqttPort", mqttPort, 64);
+  WiFiManagerParameter ask_clientID("mqtt_clientID", "MQTT clientID (ThingSpeak)", mqtt_clientID, 64);
+  WiFiManagerParameter ask_username("mqtt_username", "MQTT username (ThingSpeak)", mqtt_username, 64);
+  WiFiManagerParameter ask_password("mqtt_password", "MQTT password (ThingSpeak)", mqtt_password, 64);
+  WiFiManagerParameter ask_channelID("channelID", "channelID (ThingSpeak)", channelID, 64);
 
   
   wifiManager.setSaveConfigCallback(saveConfigCallback);
