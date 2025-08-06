@@ -163,8 +163,7 @@ void send_data(){
     String pub_str;
     for(int i = 0; i < number_of_sensors; i++){
       if(sens_values[i] != -4000){
-        String tmp_str = String("field") + String(i + 1).c_str() + String("=") + String(sens_values[i]).c_str() + String("&");
-        pub_str = pub_str + tmp_str;
+        pub_str.concat(String("field") + String(i + 1).c_str() + String("=") + String(sens_values[i]).c_str() + String("&"));
       }
     }
     int lastIndex = pub_str.length() - 1;
