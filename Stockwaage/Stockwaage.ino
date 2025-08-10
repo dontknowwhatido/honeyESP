@@ -77,20 +77,25 @@ void mqttSubscriptionCallback( char* topic, byte* payload, unsigned int length )
 void connectWifi(){
   Serial.print( "Connecting to Wi-Fi..." );
   // Loop until WiFi connection is successful
-  #ifdef ESP8266BOARD
-    while ( WiFi.waitForConnectResult() != WL_CONNECTED ) {
-  #else
-    while ( WiFi.status() != WL_CONNECTED ) {
-  #endif
+  int i = 0;
+  while ( WiFi.waitForConnectResult() != WL_CONNECTED && i < 10) {
     bool stationConnected = wifiManager.autoConnect();
+    i++;
   }
-  Serial.println( "Connected to Wi-Fi." );
+  if(WiFi.waitForConnectResult() != WL_CONNECTED){
+    Serial.println("DeepSleep");
+    ESP.deepSleep(sleeptime*60e6);
+  }
+  else{
+    Serial.println( "Connected to Wi-Fi." );
+  }
 }
 
 // Connect to MQTT server.
 void mqttConnect() {
   // Loop until connected.
-  while ( !mqttClient.connected() )
+  int i = 0;
+  while ( !mqttClient.connected() && i < 10)
   {
     if (strcmp(mqttBroker, "mqtt3.thingspeak.com") == 0){
       Serial.println("ThingSpeak");
@@ -127,6 +132,14 @@ void mqttConnect() {
         delay( connectionDelay*1000 );
       }
     }
+    i++;
+  }
+  if(!mqttClient.connected()){
+    Serial.println("DeepSleep");
+    ESP.deepSleep(sleeptime*60e6);
+  }
+  else{
+    Serial.println("MQTT connected");
   }
 }
 
